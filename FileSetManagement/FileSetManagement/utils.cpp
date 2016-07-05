@@ -1,4 +1,4 @@
-#include <string.h>
+#include "stdafx.h"
 #include "utils.h"
 
 char* int2bytes(int number)
@@ -53,4 +53,11 @@ long bytes2long(char* bytes)
 		}
 		return sum;
 	}
+}
+
+char * strsub(char * source, int startIndex, int length)
+{
+	char* result = new char[length];
+	memcpy(result, source + startIndex, length);
+	return result;
 }

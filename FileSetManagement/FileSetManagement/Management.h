@@ -1,22 +1,26 @@
 #pragma once
 
+#define MARK "HIT--CPP"
+
 class FileTag
 {
 public:
+	FileTag(char* newFileName, int newFileID, int newFileSize, long newFileOffset, char* newChecksum);
+	FileTag(char* bytes);
 	FileTag();
 	~FileTag();
 
 	char* getFileName();
-	void setFileName(char* newFilrName);
+	void setFileName(char* newFileName);
 
-	int getFileID();
-	void setFileID(int newFileID);
+	int getFileFlag();
+	void setFileFlag(int newFileFlag);
 
 	int getFileSize();
 	void setFileSize(int newFileSize);
 
-	unsigned int getFileOffset();
-	void setFileOffset(unsigned int newFileOffset);
+	long getFileOffset();
+	void setFileOffset(long newFileOffset);
 
 	char* getChecksum();
 	void setChecksum(char* newChecksum);
@@ -25,29 +29,63 @@ public:
 
 private:
 	char fileName[256];
-	int fileID;
+	int fileFlag;
 	int fileSize;
-	unsigned int fileOffset;
+	long fileOffset;
 	char checksum[16];
 };
 
 
-class ChainListNode
+class SetHeader
 {
 public:
-	ChainListNode();
-	~ChainListNode();
+	SetHeader(char* bytes);
+	SetHeader();
+	~SetHeader();
+
+	char* getSetMark();
+	void setSetMark(char* newMark);
+
+	int getFileSize();
+	void setFileSize(int newFileSize);
+
+	int getMaxFileNumber();
+	void setMaxFileNumber(int newSetMaxNumber);
+
+	char* getChecksum();
+	void setChecksum(char* newChecksum);
+
+	FileTag* getFileTagsList();
+	void setFileTagsList(FileTag* newFileTags);
+
+	char* object2bytes();
 
 private:
-
+	char setMark[8];
+	int fileSize;
+	int maxFileNumber;
+	char checksum[16];
+	FileTag* fileTagsList;
 };
 
-class ChainList
+class FileSet
 {
 public:
-	ChainList();
-	~ChainList();
+	FileSet(FILE* filePoint);
+	FileSet();
+	~FileSet();
+
+	SetHeader getHeader();
+	void setHeader(SetHeader newHeader);
+
+	FILE* getFilePoint();
+	void setFilePoint(FILE* newFilePoint);
+
+	int getHeaderLength();
+	void setHeaderLength(int newHeaderLength);
 
 private:
-
+	SetHeader header;
+	int headerLength;
+	FILE* fp;
 };
