@@ -1,6 +1,9 @@
 #include "stdafx.h"
 #include "Management.h"
 #include "utils.h"
+#include "sha1.h"
+
+using namespace std;
 
 FileTag::FileTag(char* bytes)
 {
@@ -26,6 +29,11 @@ FileTag::FileTag(char* bytes)
 
 FileTag::FileTag()
 {
+	memcpy(fileName, 0, 256);
+	fileFlag = 0; // 0 -> unused;
+	fileSize = 0;
+	fileOffset = 0;
+	memcpy(checksum, 0, 16);
 }
 
 FileTag::FileTag(char * newFileName, int newFileFlag, int newFileSize, long newFileOffset, char * newChecksum)
@@ -104,8 +112,8 @@ char * FileTag::object2bytes()
 
 SetHeader::SetHeader(char * bytes)
 {
-	memcpy(setMark, bytes, 8);
-	fileSize = bytes2int(strsub(bytes, 8, 4));
+	memcpy(setMark, bytes, 4);
+	fileSize = bytes2long(strsub(bytes, 4, 8));
 	maxFileNumber = bytes2int(strsub(bytes, 12, 4));
 	memcpy(checksum, bytes + 16, 16);
 
@@ -114,6 +122,22 @@ SetHeader::SetHeader(char * bytes)
 	{
 		fileTagsList[i] = FileTag(strsub(bytes, 32 + 288 * i, 288));
 	}
+}
+
+SetHeader::SetHeader(int newFileNumber)
+{
+	memcpy(setMark, MARK, 4);
+	fileSize = 32 + newFileNumber * 288;
+	maxFileNumber = newFileNumber;
+	memset(checksum, 0, 16);
+	fileTagsList = new FileTag[10];
+	//fileTagsList = new FileTag[newFileNumber];
+
+	for (int i = 0; i < newFileNumber; i++)
+	{
+		fileTagsList[i] = FileTag();
+	}
+
 }
 
 SetHeader::SetHeader()
@@ -135,12 +159,12 @@ void SetHeader::setSetMark(char * newMark)
 	strcpy_s(setMark, newMark);
 }
 
-int SetHeader::getFileSize()
+long SetHeader::getFileSize()
 {
 	return fileSize;
 }
 
-void SetHeader::setFileSize(int newFileSize)
+void SetHeader::setFileSize(long newFileSize)
 {
 	fileSize = newFileSize;
 }
@@ -179,8 +203,8 @@ char * SetHeader::object2bytes()
 {
 	char* result = new char[32 + maxFileNumber * 288];
 	
-	memcpy(result, setMark, 8);
-	memcpy(result + 8, int2bytes(fileSize), 4);
+	memcpy(result, setMark, 4);
+	memcpy(result + 4, long2bytes(fileSize), 8);
 	memcpy(result + 12, int2bytes(maxFileNumber), 4);
 	memcpy(result + 16, checksum, 16);
 
@@ -223,6 +247,14 @@ FileSet::FileSet(FILE * filePoint)
 
 }
 
+FileSet::FileSet(FILE * filePoint, int fileNumber)
+{
+	fp = filePoint;
+	headerLength = 32 + 288 * fileNumber;
+	header = SetHeader(fileNumber);
+	fwrite(header.object2bytes(), headerLength, 1, fp);
+}
+
 FileSet::FileSet()
 {
 }
@@ -259,4 +291,61 @@ int FileSet::getHeaderLength()
 void FileSet::setHeaderLength(int newHeaderLength)
 {
 	headerLength = newHeaderLength;
+}
+
+bool FileSet::close()
+{
+	long hashStringLenght = header.getFileSize() - 32;
+	char* hashChars = new char[hashStringLenght];
+
+	fseek(fp, 32, SEEK_SET);
+	fread(hashChars, hashStringLenght, 1, fp);
+
+	SHA1* sha1 = new SHA1();
+	sha1->addBytes(hashChars, hashStringLenght);
+	unsigned char* digest = sha1->getDigest();
+
+	char* digest_128bit = new char[16];
+	memcpy(digest_128bit, digest, 16);
+
+	header.setChecksum(digest_128bit);
+
+	fseek(fp, 0, SEEK_SET);
+	fwrite(header.object2bytes(), headerLength, 1, fp);
+
+	fclose(fp);
+
+	return true;
+}
+
+Management::Management()
+{
+	fileSet = NULL;
+}
+
+Management::~Management()
+{
+}
+
+bool Management::createFileSet(char * filePath, int maxFileNumberOfNewSet)
+{
+	if (fileSet != NULL)
+	{
+		cout << "You have already opened a file. Please close it and try again." << endl;
+		return false;
+	}
+
+	errno_t err;
+	FILE *fp;
+	err = fopen_s(&fp, filePath, "wb");
+
+	fileSet = new FileSet(fp, maxFileNumberOfNewSet);
+
+	return true;
+}
+
+bool Management::closeFileSet()
+{
+	fileSet->close();
+	return true;
 }

@@ -1,6 +1,6 @@
 #pragma once
 
-#define MARK "HIT--CPP"
+#define MARK "HIT-"
 
 class FileTag
 {
@@ -40,14 +40,15 @@ class SetHeader
 {
 public:
 	SetHeader(char* bytes);
+	SetHeader(int newFileNumber);
 	SetHeader();
 	~SetHeader();
 
 	char* getSetMark();
 	void setSetMark(char* newMark);
 
-	int getFileSize();
-	void setFileSize(int newFileSize);
+	long getFileSize();
+	void setFileSize(long newFileSize);
 
 	int getMaxFileNumber();
 	void setMaxFileNumber(int newSetMaxNumber);
@@ -61,8 +62,8 @@ public:
 	char* object2bytes();
 
 private:
-	char setMark[8];
-	int fileSize;
+	char setMark[4];
+	long fileSize;
 	int maxFileNumber;
 	char checksum[16];
 	FileTag* fileTagsList;
@@ -72,6 +73,7 @@ class FileSet
 {
 public:
 	FileSet(FILE* filePoint);
+	FileSet(FILE* filePoint, int fileNumber);
 	FileSet();
 	~FileSet();
 
@@ -84,8 +86,24 @@ public:
 	int getHeaderLength();
 	void setHeaderLength(int newHeaderLength);
 
+	bool close();
+
 private:
 	SetHeader header;
 	int headerLength;
 	FILE* fp;
+};
+
+class Management
+{
+public:
+	Management();
+	~Management();
+
+	bool createFileSet(char* filePath, int maxFileNumberOfNewSet);
+	bool closeFileSet();
+
+private:
+	FileSet* fileSet;
+
 };

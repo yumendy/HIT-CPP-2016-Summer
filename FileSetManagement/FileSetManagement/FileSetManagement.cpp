@@ -8,11 +8,15 @@
 
 int main()
 {
-	char* s = int2bytes(10);
-	for (int i = 0; i < 4; i++)
-	{
-		printf("%d\n", strlen(MARK));
-	}
+	//Management management = Management();
+
+	//management.createFileSet("test.dat", 10);
+
+	//management.closeFileSet();
+
+	FileTag *fileTagList;
+
+	fileTagList = new FileTag[10];
 	
     return 0;
 }
