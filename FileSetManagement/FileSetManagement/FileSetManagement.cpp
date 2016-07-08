@@ -8,15 +8,17 @@
 
 int main()
 {
-	//Management management = Management();
+	Management management = Management();
 
-	//management.createFileSet("test.dat", 10);
+	//management.createFileSet("test.dat", 2);
+	management.openFileSet("test.dat");
+	//management.addFileToFileSet("test1.txt");
+	//management.addFileToFileSet("test2.txt");
+	//management.deleteFileFromFileSet("test2.txt");
+	//management.addFileToFileSet("test1.txt");
+	management.fetchFileFromFileSet("test1.txt", "test.txt");
 
-	//management.closeFileSet();
-
-	FileTag *fileTagList;
-
-	fileTagList = new FileTag[10];
+	management.closeFileSet();
 	
     return 0;
 }

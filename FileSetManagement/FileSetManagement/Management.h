@@ -19,8 +19,8 @@ public:
 	int getFileSize();
 	void setFileSize(int newFileSize);
 
-	long getFileOffset();
-	void setFileOffset(long newFileOffset);
+	__int64 getFileOffset();
+	void setFileOffset(__int64 newFileOffset);
 
 	char* getChecksum();
 	void setChecksum(char* newChecksum);
@@ -31,7 +31,7 @@ private:
 	char fileName[256];
 	int fileFlag;
 	int fileSize;
-	long fileOffset;
+	__int64 fileOffset;
 	char checksum[16];
 };
 
@@ -47,8 +47,8 @@ public:
 	char* getSetMark();
 	void setSetMark(char* newMark);
 
-	long getFileSize();
-	void setFileSize(long newFileSize);
+	__int64 getFileSize();
+	void setFileSize(__int64 newFileSize);
 
 	int getMaxFileNumber();
 	void setMaxFileNumber(int newSetMaxNumber);
@@ -56,17 +56,17 @@ public:
 	char* getChecksum();
 	void setChecksum(char* newChecksum);
 
-	FileTag* getFileTagsList();
-	void setFileTagsList(FileTag* newFileTags);
+	FileTag** getFileTagsList();
+	void setFileTagsList(FileTag** newFileTags);
 
 	char* object2bytes();
 
 private:
 	char setMark[4];
-	long fileSize;
+	__int64 fileSize;
 	int maxFileNumber;
 	char checksum[16];
-	FileTag* fileTagsList;
+	FileTag *(*fileTagsList);
 };
 
 class FileSet
@@ -77,8 +77,8 @@ public:
 	FileSet();
 	~FileSet();
 
-	SetHeader getHeader();
-	void setHeader(SetHeader newHeader);
+	SetHeader* getHeader();
+	void setHeader(SetHeader * newHeader);
 
 	FILE* getFilePoint();
 	void setFilePoint(FILE* newFilePoint);
@@ -86,10 +86,13 @@ public:
 	int getHeaderLength();
 	void setHeaderLength(int newHeaderLength);
 
+	bool addFile(char* fileName, int fileLength, char* data, char* checksum);
+	bool removeFile(char* fileName);
+	char* fetchFile(char* fileName);
 	bool close();
 
 private:
-	SetHeader header;
+	SetHeader * header;
 	int headerLength;
 	FILE* fp;
 };
@@ -101,6 +104,10 @@ public:
 	~Management();
 
 	bool createFileSet(char* filePath, int maxFileNumberOfNewSet);
+	bool openFileSet(char* filePath);
+	bool addFileToFileSet(char* filePath);
+	bool deleteFileFromFileSet(char* fileName);
+	bool fetchFileFromFileSet(char* fileName, char* newPathAndName);
 	bool closeFileSet();
 
 private:

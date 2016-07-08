@@ -29,11 +29,11 @@ FileTag::FileTag(char* bytes)
 
 FileTag::FileTag()
 {
-	memcpy(fileName, 0, 256);
+	memset(fileName, 0, 256);
 	fileFlag = 0; // 0 -> unused;
 	fileSize = 0;
 	fileOffset = 0;
-	memcpy(checksum, 0, 16);
+	memset(checksum, 0, 16);
 }
 
 FileTag::FileTag(char * newFileName, int newFileFlag, int newFileSize, long newFileOffset, char * newChecksum)
@@ -56,6 +56,7 @@ char * FileTag::getFileName()
 
 void FileTag::setFileName(char* newFileName)
 {
+	memset(fileName, 0, 256);
 	strcpy_s(fileName, newFileName);
 }
 
@@ -79,12 +80,12 @@ void FileTag::setFileSize(int newFileSize)
 	fileSize = newFileSize;
 }
 
-long FileTag::getFileOffset()
+__int64 FileTag::getFileOffset()
 {
 	return fileOffset;
 }
 
-void FileTag::setFileOffset(long newFileOffset)
+void FileTag::setFileOffset(__int64 newFileOffset)
 {
 	fileOffset = newFileOffset;
 }
@@ -96,7 +97,7 @@ char * FileTag::getChecksum()
 
 void FileTag::setChecksum(char * newChecksum)
 {
-	strcpy_s(checksum, newChecksum);
+	memcpy(checksum, newChecksum, 16);
 }
 
 char * FileTag::object2bytes()
@@ -117,10 +118,10 @@ SetHeader::SetHeader(char * bytes)
 	maxFileNumber = bytes2int(strsub(bytes, 12, 4));
 	memcpy(checksum, bytes + 16, 16);
 
-	fileTagsList = new FileTag[maxFileNumber];
+	fileTagsList = new FileTag*[maxFileNumber];
 	for (int i = 0; i < maxFileNumber; i++)
 	{
-		fileTagsList[i] = FileTag(strsub(bytes, 32 + 288 * i, 288));
+		fileTagsList[i] = new FileTag(strsub(bytes, 32 + 288 * i, 288));
 	}
 }
 
@@ -130,12 +131,11 @@ SetHeader::SetHeader(int newFileNumber)
 	fileSize = 32 + newFileNumber * 288;
 	maxFileNumber = newFileNumber;
 	memset(checksum, 0, 16);
-	fileTagsList = new FileTag[10];
-	//fileTagsList = new FileTag[newFileNumber];
+	fileTagsList = new FileTag*[newFileNumber];
 
 	for (int i = 0; i < newFileNumber; i++)
 	{
-		fileTagsList[i] = FileTag();
+		fileTagsList[i] = new FileTag();
 	}
 
 }
@@ -146,7 +146,7 @@ SetHeader::SetHeader()
 
 SetHeader::~SetHeader()
 {
-	delete fileTagsList;
+	delete[] fileTagsList;
 }
 
 char * SetHeader::getSetMark()
@@ -156,15 +156,15 @@ char * SetHeader::getSetMark()
 
 void SetHeader::setSetMark(char * newMark)
 {
-	strcpy_s(setMark, newMark);
+	memcpy(setMark, newMark, 4);
 }
 
-long SetHeader::getFileSize()
+__int64 SetHeader::getFileSize()
 {
 	return fileSize;
 }
 
-void SetHeader::setFileSize(long newFileSize)
+void SetHeader::setFileSize(__int64 newFileSize)
 {
 	fileSize = newFileSize;
 }
@@ -186,15 +186,15 @@ char * SetHeader::getChecksum()
 
 void SetHeader::setChecksum(char * newChecksum)
 {
-	strcpy_s(checksum, newChecksum);
+	memcpy(checksum, newChecksum, 16);
 }
 
-FileTag * SetHeader::getFileTagsList()
+FileTag ** SetHeader::getFileTagsList()
 {
 	return fileTagsList;
 }
 
-void SetHeader::setFileTagsList(FileTag * newFileTags)
+void SetHeader::setFileTagsList(FileTag ** newFileTags)
 {
 	fileTagsList = newFileTags;
 }
@@ -210,7 +210,7 @@ char * SetHeader::object2bytes()
 
 	for (int i = 0; i < maxFileNumber; i++)
 	{
-		memcpy(result + 32 + i * 288, fileTagsList[i].object2bytes(), 288);
+		memcpy(result + 32 + i * 288, fileTagsList[i]->object2bytes(), 288);
 	}
 	return result;
 }
@@ -220,11 +220,11 @@ FileSet::FileSet(FILE * filePoint)
 	char* temp;
 	fp = filePoint;
 
-	temp = new char[8];
+	temp = new char[4];
 
-	fread_s(temp, 8, 8, 1, fp);
+	fread_s(temp, 4, 4, 1, fp);
 
-	if (!strcmp(temp, MARK))
+	if (!strcmpn(temp, MARK, 4))
 	{
 		fseek(fp, 12, SEEK_SET);
 		delete temp;
@@ -237,7 +237,7 @@ FileSet::FileSet(FILE * filePoint)
 		temp = new char[headerLength];
 		fseek(fp, 0, SEEK_SET);
 		fread_s(temp, headerLength, headerLength, 1, fp);
-		header = SetHeader(temp);
+		header = new SetHeader(temp);
 	}
 	else
 	{
@@ -251,8 +251,8 @@ FileSet::FileSet(FILE * filePoint, int fileNumber)
 {
 	fp = filePoint;
 	headerLength = 32 + 288 * fileNumber;
-	header = SetHeader(fileNumber);
-	fwrite(header.object2bytes(), headerLength, 1, fp);
+	header = new SetHeader(fileNumber);
+	fwrite(header->object2bytes(), headerLength, 1, fp);
 }
 
 FileSet::FileSet()
@@ -263,12 +263,12 @@ FileSet::~FileSet()
 {
 }
 
-SetHeader FileSet::getHeader()
+SetHeader* FileSet::getHeader()
 {
 	return header;
 }
 
-void FileSet::setHeader(SetHeader newHeader)
+void FileSet::setHeader(SetHeader* newHeader)
 {
 	header = newHeader;
 }
@@ -293,9 +293,84 @@ void FileSet::setHeaderLength(int newHeaderLength)
 	headerLength = newHeaderLength;
 }
 
+bool FileSet::addFile(char * fileName, int fileLength, char * data, char* checksum)
+{
+	bool savedFlag = false;
+	for (int i = 0; i < header->getMaxFileNumber(); i++)
+	{
+		FileTag* temp = header->getFileTagsList()[i];
+		if (temp->getFileFlag() == 0) // empty space
+		{
+			temp->setFileName(fileName);
+			temp->setFileSize(fileLength);
+			temp->setChecksum(checksum);
+			temp->setFileOffset(ftell(fp));
+			temp->setFileFlag(1);
+			fwrite(data, fileLength, 1, fp);
+			header->setFileSize(header->getFileSize() + fileLength);
+			savedFlag = true;
+			break;
+		}
+		else if (temp->getFileFlag() == 2) // the file has been deleted
+		{
+			if (temp->getFileSize() >= fileLength)
+			{
+				temp->setFileName(fileName);
+				temp->setFileSize(fileLength);
+				temp->setChecksum(checksum);
+				temp->setFileFlag(1);
+				_fseeki64(fp, temp->getFileOffset(), SEEK_SET);
+				fwrite(data, fileLength, 1, fp);
+				fseek(fp, 0, SEEK_END);
+				savedFlag = true;
+				break;
+			}
+		}
+	}
+	if (!savedFlag)
+	{
+		cout << "this file set is full!" << endl;
+		return false;
+	}
+	return true;
+}
+
+bool FileSet::removeFile(char * fileName)
+{
+	for (int i = 0; i < header->getMaxFileNumber(); i++)
+	{
+		FileTag* temp = header->getFileTagsList()[i];
+		if (!strcmpn(temp->getFileName(), fileName, strlen(fileName)))
+		{
+			temp->setFileFlag(2);
+			break;
+		}
+	}
+	return true;
+}
+
+char* FileSet::fetchFile(char * fileName)
+{
+	char* result;
+	for (int i = 0; i < header->getMaxFileNumber(); i++)
+	{
+		FileTag* temp = header->getFileTagsList()[i];
+		if (!strcmpn(temp->getFileName(), fileName, strlen(fileName)))
+		{
+			result = new char[temp->getFileSize() + 1];
+			memset(result, 0, temp->getFileSize() + 1);
+			_fseeki64(fp, temp->getFileOffset(), SEEK_SET);
+			fread_s(result, temp->getFileSize(), temp->getFileSize(), 1, fp);
+			_fseeki64(fp, 0, SEEK_END);
+			return result;
+		}
+	}
+	return NULL;
+}
+
 bool FileSet::close()
 {
-	long hashStringLenght = header.getFileSize() - 32;
+	__int64 hashStringLenght = header->getFileSize() - 32;
 	char* hashChars = new char[hashStringLenght];
 
 	fseek(fp, 32, SEEK_SET);
@@ -308,12 +383,13 @@ bool FileSet::close()
 	char* digest_128bit = new char[16];
 	memcpy(digest_128bit, digest, 16);
 
-	header.setChecksum(digest_128bit);
+	header->setChecksum(digest_128bit);
 
 	fseek(fp, 0, SEEK_SET);
-	fwrite(header.object2bytes(), headerLength, 1, fp);
+	fwrite(header->object2bytes(), headerLength, 1, fp);
 
 	fclose(fp);
+	delete sha1;
 
 	return true;
 }
@@ -342,6 +418,99 @@ bool Management::createFileSet(char * filePath, int maxFileNumberOfNewSet)
 	fileSet = new FileSet(fp, maxFileNumberOfNewSet);
 
 	return true;
+}
+
+bool Management::openFileSet(char * filePath)
+{
+
+	if (fileSet != NULL)
+	{
+		cout << "You have already opened a file. Please close it and try again." << endl;
+		return false;
+	}
+
+	errno_t err;
+	FILE *fp;
+	err = fopen_s(&fp, filePath, "rb+");
+	fileSet = new FileSet(fp);
+
+	return true;
+}
+
+bool Management::addFileToFileSet(char * filePath)
+{
+	char* buffer;
+
+	errno_t err;
+	FILE* fp;
+	err = fopen_s(&fp, filePath, "rb");
+
+	// get file length
+	fseek(fp, 0, SEEK_END);
+	int fileLength = ftell(fp);
+
+	//read file to buffer
+	buffer = new char[fileLength];
+
+	fseek(fp, 0, SEEK_SET);
+
+	fread(buffer, fileLength, 1, fp);
+	fclose(fp);
+
+
+	// get file name
+	char* fileNamePos = strrchr(filePath, '\\');
+	char* fileName = new char[256];
+	memset(fileName, 0, 256);
+
+	// get checksum
+	SHA1* sha1 = new SHA1();
+	sha1->addBytes(buffer, fileLength);
+	unsigned char* digist = sha1->getDigest();
+	char* checksum = new char[16];
+	memcpy(checksum, digist, 16);
+	delete sha1;
+
+	if (fileNamePos == NULL)
+	{
+		memcpy(fileName, filePath, strlen(filePath));
+	}
+	else
+	{
+		strcpy_s(fileName,256, fileNamePos + 1);
+	}
+
+
+	// add a file to set;
+	fileSet->addFile(fileName, fileLength, buffer, checksum);
+
+	return false;
+}
+
+bool Management::deleteFileFromFileSet(char * fileName)
+{
+	fileSet->removeFile(fileName);
+	return false;
+}
+
+bool Management::fetchFileFromFileSet(char * fileName, char* newPathAndName)
+{
+	char* data = fileSet->fetchFile(fileName);
+	if (data == NULL)
+	{
+		cout << "Not found the file!" << endl;
+		return false;
+	}
+	else
+	{
+		errno_t err;
+		FILE *fp;
+		err = fopen_s(&fp, newPathAndName, "wb");
+		fwrite(data, strlen(data), 1, fp);
+		fclose(fp);
+		return true;
+	}
+	
 }
 
 bool Management::closeFileSet()

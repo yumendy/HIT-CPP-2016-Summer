@@ -143,6 +143,8 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <Text Include="ReadMe.txt" />
+    <Text Include="test1.txt" />
+    <Text Include="test2.txt" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Management.h" />
