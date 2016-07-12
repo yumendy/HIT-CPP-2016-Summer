@@ -89,6 +89,7 @@ public:
 	bool addFile(char* fileName, int fileLength, char* data, char* checksum);
 	bool removeFile(char* fileName);
 	char* fetchFile(char* fileName);
+	bool printFileList();
 	bool close();
 
 private:
@@ -108,6 +109,7 @@ public:
 	bool addFileToFileSet(char* filePath);
 	bool deleteFileFromFileSet(char* fileName);
 	bool fetchFileFromFileSet(char* fileName, char* newPathAndName);
+	bool printFileListInFileSet();
 	bool closeFileSet();
 
 private:

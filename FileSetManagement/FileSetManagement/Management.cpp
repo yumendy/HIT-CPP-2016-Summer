@@ -103,6 +103,7 @@ void FileTag::setChecksum(char * newChecksum)
 char * FileTag::object2bytes()
 {
 	char result[288];
+	memset(result, 0, 288);
 	memcpy(result, fileName, strlen(fileName) <= 256 ? strlen(fileName) : 256);
 	memcpy(result + 256, int2bytes(fileFlag), 4);
 	memcpy(result + 260, int2bytes(fileSize), 4);
@@ -202,6 +203,7 @@ void SetHeader::setFileTagsList(FileTag ** newFileTags)
 char * SetHeader::object2bytes()
 {
 	char* result = new char[32 + maxFileNumber * 288];
+	memset(result, 0, 32 + maxFileNumber * 288);
 	
 	memcpy(result, setMark, 4);
 	memcpy(result + 4, long2bytes(fileSize), 8);
@@ -368,6 +370,24 @@ char* FileSet::fetchFile(char * fileName)
 	return NULL;
 }
 
+bool FileSet::printFileList()
+{
+	FileTag* (*tagList) = getHeader()->getFileTagsList();
+	FileTag* temp;
+
+	cout << "File name" << "\t" << "File size(bytes)" << "\t" << "File offset(bytes)" << endl;
+	for (int i = 0; i < getHeader()->getMaxFileNumber(); i++)
+	{
+		temp = tagList[i];
+		if (temp->getFileFlag() == 1)
+		{
+			cout << temp->getFileName() << "\t" << temp->getFileSize() << "\t" << temp->getFileOffset() << endl;
+		}
+
+	}
+	return true;
+}
+
 bool FileSet::close()
 {
 	__int64 hashStringLenght = header->getFileSize() - 32;
@@ -511,6 +531,12 @@ bool Management::fetchFileFromFileSet(char * fileName, char* newPathAndName)
 		return true;
 	}
 	
+}
+
+bool Management::printFileListInFileSet()
+{
+	fileSet->printFileList();
+	return true;
 }
 
 bool Management::closeFileSet()
