@@ -5,7 +5,7 @@
 class FileTag
 {
 public:
-	FileTag(char* newFileName, int newFileID, int newFileSize, long newFileOffset, char* newChecksum);
+	FileTag(char* newFileName, int newFileID, int newFileSize, __int64 newFileOffset, char* newChecksum);
 	FileTag(char* bytes);
 	FileTag();
 	~FileTag();

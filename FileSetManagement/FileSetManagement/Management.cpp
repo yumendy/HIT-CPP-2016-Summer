@@ -36,7 +36,7 @@ FileTag::FileTag()
 	memset(checksum, 0, 16);
 }
 
-FileTag::FileTag(char * newFileName, int newFileFlag, int newFileSize, long newFileOffset, char * newChecksum)
+FileTag::FileTag(char * newFileName, int newFileFlag, int newFileSize, __int64 newFileOffset, char * newChecksum)
 {
 	strcpy_s(fileName, newFileName);
 	fileFlag = newFileFlag;
